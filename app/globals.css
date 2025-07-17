@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom styles for the body to match the dark theme */
+body {
+  background-color: #0f172a; /* A dark slate background */
+  color: #e2e8f0; /* Light text color for better contrast */
+}
+
+/* Optional: Scrollbar styling for a cleaner look */
+/* For WebKit browsers (Chrome, Safari) */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1e293b; /* Darker track */
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #475569; /* Medium gray thumb */
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #64748b; /* Lighter gray on hover */
+}
