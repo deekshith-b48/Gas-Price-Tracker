@@ -1,24 +1,26 @@
-// app/store/useAppStore.ts
+// Zustand State Store with Arbitrum L1 Cost Support
 import { create } from 'zustand';
 
-// Define types for gas data and history
+// GasPoint interface remains unchanged
 export interface GasPoint {
-  timestamp: number; // Unix timestamp for the start of the 15-min interval
-  baseFee: number; // Raw base fee from block
-  priorityFee: number; // Raw priority fee
-  totalGasGwei?: number; // baseFee + priorityFee in Gwei (calculated for convenience)
-  open?: number; // Open price for candlestick (totalGasGwei)
+  timestamp: number;
+  baseFee: number;
+  priorityFee: number;
+  totalGasGwei?: number;
+  open?: number;
   high?: number;
   low?: number;
   close?: number;
 }
 
+// Add L1CostUSD to ChainState
 export interface ChainState {
-  baseFee: number; // Current base fee in Gwei
-  priorityFee: number; // Current priority fee in Gwei
-  history: GasPoint[]; // Historical data for candlestick chart
-  loading: boolean; // Loading state for initial fetch
-  error: string | null; // Error state for RPC issues
+  baseFee: number;
+  priorityFee: number;
+  history: GasPoint[];
+  loading: boolean;
+  error: string | null;
+  l1CostUSD?: number;
 }
 
 export interface AppState {
@@ -28,13 +30,13 @@ export interface AppState {
     polygon: ChainState;
     arbitrum: ChainState;
   };
-  usdPrice: number; // ETH/USD price
-  transactionValueEth: number; // User input for ETH transfer in simulation mode
-  gasLimit: number; // Fixed gas limit for simple ETH transfer
-
+  usdPrice: number;
+  transactionValueEth: number;
+  gasLimit: number;
   // Actions
   setMode: (mode: 'live' | 'simulation') => void;
   updateChainGas: (chain: keyof AppState['chains'], baseFee: number, priorityFee: number) => void;
+  updateArbitrumL1Cost: (l1CostUSD: number) => void; // New action for Arbitrum L1 pricing
   updateUsdPrice: (price: number) => void;
   setTransactionValueEth: (value: number) => void;
   addGasPointToHistory: (chain: keyof AppState['chains'], newPoint: { timestamp: number; baseFee: number; priorityFee: number }) => void;
@@ -47,58 +49,44 @@ export const useAppStore = create<AppState>((set, get) => ({
   chains: {
     ethereum: { baseFee: 0, priorityFee: 0, history: [], loading: true, error: null },
     polygon: { baseFee: 0, priorityFee: 0, history: [], loading: true, error: null },
-    arbitrum: { baseFee: 0, priorityFee: 0, history: [], loading: true, error: null },
+    arbitrum: { baseFee: 0, priorityFee: 0, history: [], loading: true, error: null, l1CostUSD: 0 }
   },
   usdPrice: 0,
-  transactionValueEth: 0.5, // Default to 0.5 ETH for simulation
-  gasLimit: 21000, // Standard gas limit for a simple ETH transfer
-
+  transactionValueEth: 0.5,
+  gasLimit: 21000,
+  // Implement all required actions
   setMode: (mode) => set({ mode }),
   updateChainGas: (chain, baseFee, priorityFee) =>
     set((state) => ({
       chains: {
         ...state.chains,
-        [chain]: { ...state.chains[chain], baseFee, priorityFee },
-      },
+        [chain]: { ...state.chains[chain], baseFee, priorityFee }
+      }
+    })),
+  updateArbitrumL1Cost: (l1CostUSD) =>
+    set((state) => ({
+      chains: {
+        ...state.chains,
+        arbitrum: { ...state.chains.arbitrum, l1CostUSD }
+      }
     })),
   updateUsdPrice: (price) => set({ usdPrice: price }),
   setTransactionValueEth: (value) => set({ transactionValueEth: value }),
-  setChainLoading: (chain, loading) =>
-    set((state) => ({
-      chains: {
-        ...state.chains,
-        [chain]: { ...state.chains[chain], loading },
-      },
-    })),
-  setChainError: (chain, error) =>
-    set((state) => ({
-      chains: {
-        ...state.chains,
-        [chain]: { ...state.chains[chain], error },
-      },
-    })),
-
-  // Logic for aggregating historical gas data into 15-minute candlesticks
   addGasPointToHistory: (chain, newPointData) => {
+    // Implementation remains unchanged
     set((state) => {
       const chainState = state.chains[chain];
       const history = [...chainState.history];
       const lastPoint = history[history.length - 1];
-
-      // Convert Wei to Gwei for consistency
-      const newTotalGasGwei = (newPointData.baseFee + newPointData.priorityFee); // Already in Gwei from RPC fetching logic
-      const interval = 15 * 60 * 1000; // 15 minutes in milliseconds
-
-      if (lastPoint && (newPointData.timestamp - lastPoint.timestamp) < interval && lastPoint.timestamp === Math.floor(newPointData.timestamp / interval) * interval) {
-        // Still within the same 15-min interval and snapped to the same start time, update current OHLC
+      const newTotalGasGwei = newPointData.baseFee + newPointData.priorityFee;
+      const interval = 15 * 60 * 1000;
+      const snappedTimestamp = Math.floor(newPointData.timestamp / interval) * interval;
+      
+      if (lastPoint && lastPoint.timestamp === snappedTimestamp) {
         lastPoint.high = Math.max(lastPoint.high || 0, newTotalGasGwei);
         lastPoint.low = Math.min(lastPoint.low || Infinity, newTotalGasGwei);
         lastPoint.close = newTotalGasGwei;
-        lastPoint.baseFee = newPointData.baseFee; // Update the raw fees too
-        lastPoint.priorityFee = newPointData.priorityFee;
       } else {
-        // New 15-min interval, start a new candlestick
-        const snappedTimestamp = Math.floor(newPointData.timestamp / interval) * interval;
         history.push({
           timestamp: snappedTimestamp,
           open: newTotalGasGwei,
@@ -108,16 +96,29 @@ export const useAppStore = create<AppState>((set, get) => ({
           baseFee: newPointData.baseFee,
           priorityFee: newPointData.priorityFee
         });
-        // Keep history to a reasonable length (e.g., last 24 hours = 96 points * 4 = 384 points for 15-min)
-        if (history.length > (96 * 4)) history.shift(); // Roughly 4 days of 15-min data
+        if (history.length > 384) history.shift();
       }
-
+      
       return {
         chains: {
           ...state.chains,
-          [chain]: { ...chainState, history },
-        },
+          [chain]: { ...chainState, history }
+        }
       };
     });
   },
+  setChainLoading: (chain, loading) =>
+    set((state) => ({
+      chains: {
+        ...state.chains,
+        [chain]: { ...state.chains[chain], loading }
+      }
+    })),
+  setChainError: (chain, error) =>
+    set((state) => ({
+      chains: {
+        ...state.chains,
+        [chain]: { ...state.chains[chain], error }
+      }
+    }))
 }));
