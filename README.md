@@ -2,6 +2,8 @@
 
 This project is a Next.js dashboard designed to fetch and display real-time gas prices from Ethereum, Polygon, and Arbitrum. It also includes a "simulation mode" to calculate estimated transaction costs in USD, leveraging live ETH/USD prices from Uniswap V3.
 
+---
+
 ## ✨ Features
 
 * **Real-Time Gas Prices:** Fetches `baseFeePerGas` and `maxPriorityFeePerGas` (or equivalent) directly from native RPC endpoints using WebSocket connections.
@@ -12,6 +14,8 @@ This project is a Next.js dashboard designed to fetch and display real-time gas 
 * **Responsive Dashboard:** Built with Next.js and Tailwind CSS for a modern and adaptable user interface.
 * **State Management:** Utilizes Zustand for efficient and reactive state management, handling "live" and "simulation" modes with shared data.
 
+---
+
 ## 🚀 Technologies Used
 
 * **Next.js 14+**: React framework for production.
@@ -21,62 +25,109 @@ This project is a Next.js dashboard designed to fetch and display real-time gas 
 * **Zustand**: A small, fast, and scalable bear-bones state-management solution.
 * **Lightweight Charts**: High-performance financial charting library for displaying candlestick data.
 
+---
+
+## 🔧 Main Methods & Architecture
+
+### State Management (`app/store/useAppStore.ts`)
+- Centralized Zustand store manages all chain states, transaction simulation, and UI modes.
+- Methods include:
+  - `updateChainGas(chain, baseFee, priorityFee)`
+  - `updateArbitrumL1Cost(l1CostUSD)`
+  - `updateUsdPrice(price)`
+  - `setTransactionValueEth(value)`
+  - `addGasPointToHistory(chain, newPointData)`
+  - `setChainLoading(chain, loading)`
+  - Handles candlestick aggregation for charting.
+
+### Web3 Integration (`app/lib/web3Utils.ts`)
+- Uses native WebSocket RPC endpoints for real-time updates.
+- Fetches latest block data including gas prices.
+- Parses Uniswap V3 pool swap logs to calculate live ETH/USD.
+- Special logic for Arbitrum L1 data fee estimation.
+
+### Candlestick Data Aggregation
+- Every gas price update is snapped to a 15-minute interval.
+- Updates OHLC (open, high, low, close) data for chart visualization.
+- Historical data is maintained in memory with option to persist.
+
+---
+
+## 🖼️ Screenshots
+
+> To enhance this section, add screenshots showing:
+> - Real-time dashboard view (live gas prices and charts)
+> - Simulation mode UI (transaction value input, cost breakdown)
+> - Candlestick chart with gas price volatility
+> - Responsive mobile and desktop views
+
+Example:
+
+![Dashboard Screenshot](screenshots/dashboard.png)
+![Simulation Mode](screenshots/simulation.png)
+![Candlestick Chart](screenshots/chart.png)
+
+---
+
 ## 🛠️ Setup and Installation
 
-1.  **Clone the repository:**
+1. **Clone the repository:**
     ```bash
-    git clone [https://github.com/your-username/gas-tracker-dashboard.git](https://github.com/your-username/gas-tracker-dashboard.git)
-    cd gas-tracker-dashboard
+    git clone https://github.com/deekshith-b48/Gas-Price-Tracker.git
+    cd Gas-Price-Tracker
     ```
-    *(Note: Replace `https://github.com/your-username/gas-tracker-dashboard.git` with your actual repository URL)*
 
-2.  **Install dependencies:**
+2. **Install dependencies:**
     ```bash
     npm install
     ```
 
-3.  **Configure Environment Variables:**
+3. **Configure Environment Variables:**
     Create a `.env.local` file in the root of the project and add your RPC API keys. You will need WebSocket (ws:// or wss://) endpoints for real-time gas updates and HTTP (http:// or https://) endpoints for fetching historical data like Uniswap logs.
 
     ```env
-    # Get your API keys from Infura, Alchemy, etc.
-    NEXT_PUBLIC_ETHEREUM_RPC_WS="wss://mainnet.infura.io/ws/v3/YOUR_INFURA_PROJECT_ID"
-    NEXT_PUBLIC_POLYGON_RPC_WS="wss://[polygon-mainnet.g.alchemy.com/v2/YOUR_ALCHEMY_API_KEY](https://polygon-mainnet.g.alchemy.com/v2/YOUR_ALCHEMY_API_KEY)"
-    NEXT_PUBLIC_ARBITRUM_RPC_WS="wss://[arbitrum-mainnet.g.alchemy.com/v2/YOUR_ALCHEMY_API_KEY](https://arbitrum-mainnet.g.alchemy.com/v2/YOUR_ALCHEMY_API_KEY)"
-
-    NEXT_PUBLIC_ETHEREUM_RPC_HTTP="[https://mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID](https://mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID)"
-    NEXT_PUBLIC_POLYGON_RPC_HTTP="[https://polygon-mainnet.g.alchemy.com/v2/YOUR_ALCHEMY_API_KEY](https://polygon-mainnet.g.alchemy.com/v2/YOUR_ALCHEMY_API_KEY)"
-    NEXT_PUBLIC_ARBITRUM_RPC_HTTP="[https://arbitrum-mainnet.g.alchemy.com/v3/YOUR_ALCHEMY_API_KEY](https://arbitrum-mainnet.g.alchemy.com/v3/YOUR_ALCHEMY_API_KEY)"
+    NEXT_PUBLIC_ETHEREUM_RPC_WS=...
+    NEXT_PUBLIC_POLYGON_RPC_WS=...
+    NEXT_PUBLIC_ARBITRUM_RPC_WS=...
+    NEXT_PUBLIC_ETHEREUM_RPC_HTTP=...
+    NEXT_PUBLIC_POLYGON_RPC_HTTP=...
+    NEXT_PUBLIC_ARBITRUM_RPC_HTTP=...
     ```
-    **Important:** Do not commit your `.env.local` file to version control!
 
-4.  **Run the development server:**
+4. **Start the development server:**
     ```bash
     npm run dev
     ```
 
-5.  **Open in your browser:**
-    Visit `http://localhost:3000` to see the dashboard.
+---
 
 ## 💡 Usage
 
 * **Live Mode:** The dashboard will automatically fetch and display real-time gas prices for Ethereum, Polygon, and Arbitrum. The candlestick charts will update every 15 minutes with new price intervals.
 * **Simulation Mode:** Click the "Simulation Mode" button. Enter a value (in ETH) for your simulated transaction. The dashboard will instantly calculate and show the estimated USD cost of the transaction (gas + value) across all chains, using the live ETH/USD price.
 
-## 🚧 Key Complexities Handled
+---
+
+## 🛠️ Key Complexities Handled
 
 * **Direct RPC Interaction:** Utilizes `ethers.providers.WebSocketProvider` for real-time, low-latency gas price updates without relying on third-party gas APIs.
 * **Uniswap V3 Price Parsing:** Directly interprets `Swap` events from the Uniswap V3 pool using `ethers.getLogs` and raw `sqrtPriceX96` values to derive ETH/USD, avoiding higher-level SDKs.
-* **Zustand State Machine:** Implemented a robust state management system to seamlessly switch between "live" and "simulation" modes while maintaining and sharing real-time gas data and historical charts.
-* **Candlestick Data Aggregation:** Logic for converting continuous real-time gas price updates into 15-minute OHLC (Open, High, Low, Close) candlestick data points.
-* **Gas Fee Calculations:** Accurately calculates transaction costs, incorporating `baseFeePerGas` and `maxPriorityFeePerGas` where applicable (EIP-1559).
+* **Zustand State Machine:** Robust state management for seamless switching between "live" and "simulation" modes.
+* **Candlestick Data Aggregation:** Converts continuous updates into 15-minute OHLC candlestick data points.
+* **Gas Fee Calculations:** Accurately computes transaction costs, including EIP-1559 details.
+
+---
 
 ## ⚠️ Known Limitations / Future Improvements
 
-* **Arbitrum L1 Cost Estimation:** The current Arbitrum gas calculation primarily reflects L2 fees. A more precise estimation for Arbitrum's L1 data fee would require more complex RPC interactions or a dedicated SDK.
-* **Advanced Priority Fee Estimation:** For EIP-1559 chains, priority fee estimation is currently a simplified default. Implementing a more dynamic estimation (e.g., based on recent block priority fees) could improve accuracy.
-* **Error Reporting:** More granular error messages for RPC connection failures or data parsing issues could be added.
-* **Historical Data Persistence:** Currently, historical data for charts is lost on refresh. Implementing local storage or a backend could persist this data.
-* **Transaction Type Customization:** Extend simulation mode to allow users to specify different transaction types (e.g., ERC-20 transfer, NFT mint) with varying gas limits.
+* **Arbitrum L1 Cost Estimation:** Current calculation reflects L2 fees; improving precision for L1 data fee would require advanced RPC or SDK.
+* **Advanced Priority Fee Estimation:** Priority fee estimation is simplified; dynamic estimation could improve accuracy.
+* **Error Reporting:** Add more granular error messages for RPC failures.
+* **Historical Data Persistence:** Implement local storage or backend for chart data persistence.
+* **Transaction Type Customization:** Extend simulation to cover more transaction types (ERC-20 transfer, NFT mint, etc.).
 
 ---
+
+## 📬 Contact
+
+For questions or feedback, please open an issue on [GitHub](https://github.com/deekshith-b48/Gas-Price-Tracker/issues).
