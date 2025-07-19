@@ -63,9 +63,9 @@ This project is a Next.js dashboard designed to fetch and display real-time gas 
 
 Example:
 
-![Dashboard Screenshot](screenshots/dashboard.png)
-![Simulation Mode](screenshots/simulation.png)
-![Candlestick Chart](screenshots/chart.png)
+![Dashboard Screenshot](https://github.com/deekshith-b48/Gas-Price-Tracker/blob/main/ScreenShots/Screenshot_20250718_200710.png)
+![Simulation Mode](https://github.com/deekshith-b48/Gas-Price-Tracker/blob/main/ScreenShots/Screenshot_20250718_200815.png)
+![Candlestick Chart](https://github.com/deekshith-b48/Gas-Price-Tracker/blob/main/ScreenShots/Screenshot_20250718_200855.png)
 
 ---
 
